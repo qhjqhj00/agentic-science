@@ -2,7 +2,8 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+data
+config/api_dict.json
 # C extensions
 *.so
 
