@@ -1,9 +1,85 @@
-import requests
 import time
 import random
-
+from pydantic import BaseModel
+import concurrent.futures
 import asyncio
 import aiohttp
+
+
+def stream_completion(
+    agent, model_name, prompt, stop=None, stream=True, schema: BaseModel = None, max_tokens: int = 20000, top_p: float = 0.8, temperature: float = 0.8, repetition_penalty: float = 1.05, min_p: float = 0.05, top_k: int = 20):
+    
+    num_try = 0
+    while num_try < 5:
+        try:
+            response = agent.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                top_p=top_p,
+                temperature=temperature,
+                stream=stream,
+                stop=stop,
+                extra_body={
+                    "min_p": min_p,
+                    "repetition_penalty": repetition_penalty,
+                    'include_stop_str_in_output': True,
+                    'top_k': top_k,
+                    "guided_json": schema.model_json_schema() if schema else None,
+                }
+            )
+            break
+        except Exception as e:
+            print(f"Error: {e}")
+            num_try += 1
+            time.sleep(1)
+
+    if stream:
+        response_content = ""   
+        for chunk in response:
+            response_content += chunk.choices[0].delta.content
+            print(chunk.choices[0].delta.content, end="", flush=True)
+        return response_content
+    else:
+        return response.choices[0].message.content
+
+def batch_completion(
+    agent, model_name, prompts: list, max_tokens: int = 10000, top_p: float = 0.8, temperature: float = 0.8, repetition_penalty: float = 1.05, min_p: float = 0.05, top_k: int = 20, schema: BaseModel = None) -> list:
+    """Process multiple prompts in parallel using ThreadPoolExecutor"""
+    # print(f"Processing {len(prompts)} prompts in parallel...")
+    results = [None] * len(prompts)  # Initialize a list with the same length as prompts
+    
+    # Define a worker function for threading
+    def worker(index, prompt):
+        result = stream_completion(
+            agent=agent,
+            model_name=model_name,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            temperature=temperature,
+            repetition_penalty=repetition_penalty,
+            min_p=min_p,
+            top_k=top_k,
+            schema=schema,
+            stream=False  # Disable streaming for batch processing
+        )
+        results[index] = result
+    
+    # Use ThreadPoolExecutor for concurrent requests
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Map each prompt to the worker function
+        futures = {executor.submit(worker, idx, prompt): idx for idx, prompt in enumerate(prompts)}
+        
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()  # Get task result, exceptions will be caught if thrown
+            except Exception as exc:
+                print(f'Generated an exception: {exc}')
+                idx = futures[future]
+                results[idx] = None
+    
+    return results
 
 async def get_one_page(url, max_retries=5, timeout=30, session=None):
     """
