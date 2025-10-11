@@ -1,7 +1,7 @@
 import asyncio
 import os
 import json
-from dw.arxiv import get_list_page, get_abstracts, get_full_content, get_existing_arxiv_ids
+from dw.arxiv_tools import get_list_page, get_abstracts, get_full_content, get_existing_arxiv_ids
 from config.list_urls import get_list_urls_skip
 from src.utils import save_jsonl, load_jsonl
 
@@ -21,7 +21,7 @@ async def get_recent_arxiv_papers(category: str = "cs.CL", max_papers: int = 100
     all_papers = []
     
     for skip in range(0, max_papers, step):
-        existing_arxiv_ids = get_existing_arxiv_ids()
+        existing_arxiv_ids, dates = get_existing_arxiv_ids()
         print(f"Fetching papers {skip} to {skip + step}...")
         
         # Get list page URL
@@ -32,6 +32,20 @@ async def get_recent_arxiv_papers(category: str = "cs.CL", max_papers: int = 100
         
         if not list_content:
             print(f"No more papers found at skip={skip}")
+            break
+        
+        # Check if any paper in list_content has the same date as existing papers
+        should_break = False
+        for paper in list_content:
+            arxiv_id = paper.get('id', '')
+            if len(arxiv_id) >= 7 and '.' in arxiv_id:
+                date_part = arxiv_id[:7]  # e.g., "2510.02"
+                if date_part in dates:
+                    print(f"Found paper with existing date {date_part}, stopping fetch")
+                    should_break = True
+                    break
+        
+        if should_break:
             break
         
         # Get abstracts

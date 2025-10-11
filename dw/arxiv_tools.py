@@ -239,7 +239,15 @@ def get_existing_arxiv_ids(markdown_dir: str = "data/markdown") -> list:
             arxiv_id = filename[:-3]
             arxiv_ids.append(arxiv_id)
     
-    return arxiv_ids
+    # Extract dates from arxiv IDs and return as sorted list
+    dates = set()
+    for arxiv_id in arxiv_ids:
+        # Extract date part (first 7 characters: YYMM.DD)
+        if len(arxiv_id) >= 7 and '.' in arxiv_id:
+            date_part = arxiv_id[:7]  # e.g., "2510.02"
+            dates.add(date_part)
+    
+    return arxiv_ids, sorted(list(dates))
 
 
 if __name__ == "__main__":
