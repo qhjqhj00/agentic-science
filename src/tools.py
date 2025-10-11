@@ -163,7 +163,56 @@ async def get_multiple_pages(urls: list, max_concurrent: int = 10, session: aioh
         if close_session:
             await session.close()
 
+async def fetch_html_via_api(urls, token, api_endpoint):
+    """
+    Fetch HTML content via API
+    
+    Args:
+        urls: Single URL string or list of URLs
+        token: API token for authentication
+        api_endpoint: API endpoint
+    Returns:
+        Single HTML string if input is single URL, or list of HTML strings if input is list
+    """
+    import aiohttp
+    
+    # Handle single URL case
+    single_url = isinstance(urls, str)
+    if single_url:
+        urls = [urls]
+    
+    async with aiohttp.ClientSession() as session:
+        try:
+            data = {
+                "urls": urls,
+                "token": token
+            }
+            
+            async with session.post(
+                api_endpoint,
+                json=data,
+                headers={"Content-Type": "application/json"},
+                timeout=aiohttp.ClientTimeout(total=30)
+
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    # Assuming API returns {"results": [html_content1, html_content2, ...]}
+                    return result
+                else:
+                    print(f"Error fetching URLs: HTTP {response.status}")
+                    return None 
+                    
+        except Exception as e:
+            print(f"Error fetching URLs: {e}")
+            return None if single_url else {"results": {}}
+
+
 
 if __name__ == "__main__":
     from config.list_urls import get_list_urls
-    print(get_list_urls("cs.CL", 25))
+    from src.utils import load_json
+    api_dict = load_json("config/api_dict.json")
+    # urls = get_list_urls("cs.CL", 25)
+    html = asyncio.run(fetch_html_via_api("https://arxiv.org/html/2510.08575v1", api_dict["search_token"], api_dict["web_unlocker_api"]))
+    print(html)

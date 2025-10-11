@@ -4,7 +4,10 @@ from src.tools import get_multiple_pages
 import re
 import os
 from html_to_markdown import convert_to_markdown
+from src.tools import get_one_page, fetch_html_via_api
+from src.utils import load_json
 
+api_dict = load_json("config/api_dict.json")
 
 def unescape_markdown(text: str) -> str:
     """
@@ -69,14 +72,19 @@ def replace_mathml_with_annotation(html: str) -> str:
     return pattern.sub(repl, html)
 
 async def get_list_page(url):
-    fetched_content = await get_one_page(url)
+    response = await fetch_html_via_api(url, api_dict["search_token"], api_dict["web_unlocker_api"])
+    fetched_content = response["results"][url]
     soup = BeautifulSoup(fetched_content, features='html.parser')
     content = soup.dl
-    date = soup.find('h3')
-    list_ids = content.find_all('a', title = 'Abstract')
-    list_title = content.find_all('div', class_ = 'list-title mathjax')
-    list_authors = content.find_all('div', class_ = 'list-authors')
-    list_subjects = content.find_all('div', class_ = 'list-subjects')
+    date = soup.find('h3')   # TODO: 列表为空的就return none
+    try:
+        list_ids = content.find_all('a', title = 'Abstract')
+        list_title = content.find_all('div', class_ = 'list-title mathjax')
+        list_authors = content.find_all('div', class_ = 'list-authors')
+        list_subjects = content.find_all('div', class_ = 'list-subjects')
+    except Exception as e:
+        print(f"Error parsing list page: {e}")
+        return []
     list_subject_split = []
     for subjects in list_subjects:
         # print(subjects.text)
@@ -96,7 +104,7 @@ async def get_list_page(url):
     paper = pd.DataFrame(columns=name,data=items)
     return paper.to_dict(orient='records')
 
-async def get_abstracts(papers_list):
+async def get_abstracts(papers_list, existing_arxiv_ids: list = []):
     """
     Asynchronously fetch abstracts for all papers in the list and add them to the papers.
     
@@ -114,6 +122,8 @@ async def get_abstracts(papers_list):
     html_contents = await get_multiple_pages(urls)
     # Process each HTML content and add to papers list
     for i, (paper, html) in enumerate(zip(papers_list, html_contents)):
+        if paper['id'] in existing_arxiv_ids:
+            continue
         if html is None:
             paper['abstract'] = ""
             paper['comment'] = ""
@@ -141,7 +151,7 @@ async def get_abstracts(papers_list):
     
     return papers_list
 
-async def get_full_content(papers_list):
+async def get_full_content(papers_list, existing_arxiv_ids: list = []):
     """
     Asynchronously fetch full HTML content for all papers in the list and convert to markdown.
     
@@ -161,13 +171,20 @@ async def get_full_content(papers_list):
     urls = [f"https://arxiv.org/html/{paper['id']}" for paper in papers_list]
     
     # Fetch all pages concurrently
-    html_contents = await get_multiple_pages(urls)
+    response = await fetch_html_via_api(urls, api_dict["search_token"], api_dict["web_unlocker_api"])
+    html_contents = response["results"]
     
     # Process each HTML content
-    for i, (paper, html) in enumerate(zip(papers_list, html_contents)):
+    for paper in papers_list:
         arxiv_id = paper['id']
+        if arxiv_id in existing_arxiv_ids:
+            continue
         html_path = f"data/html/{arxiv_id}.html"
         markdown_path = f"data/markdown/{arxiv_id}.md"
+        
+        # Get HTML content from the dictionary using the URL as key
+        url = f"https://arxiv.org/html/{arxiv_id}"
+        html = html_contents.get(url)
         
         if html is None:
             paper['html_path'] = ""
@@ -200,14 +217,39 @@ async def get_full_content(papers_list):
     
     return papers_list
 
+def get_existing_arxiv_ids(markdown_dir: str = "data/markdown") -> list:
+    """
+    Get all arxiv IDs from existing markdown files in the specified directory.
+    
+    Args:
+        markdown_dir: Directory containing markdown files (default: "data/markdown")
+    
+    Returns:
+        List of arxiv IDs extracted from markdown filenames
+    """
+    import os
+    
+    if not os.path.exists(markdown_dir):
+        return []
+    
+    arxiv_ids = []
+    for filename in os.listdir(markdown_dir):
+        if filename.endswith('.md'):
+            # Remove .md extension to get arxiv ID
+            arxiv_id = filename[:-3]
+            arxiv_ids.append(arxiv_id)
+    
+    return arxiv_ids
+
 
 if __name__ == "__main__":
     import asyncio
-    from src.tools import get_one_page
-    from config.list_urls import get_list_urls
+    from config.list_urls import get_list_urls, get_list_urls_skip
     from src.utils import save_jsonl
-    url = get_list_urls("cs.CL", 25)
+    print(get_existing_arxiv_ids())
+    url = get_list_urls_skip("cs.CL", 25, 1000)
     list_content = asyncio.run(get_list_page(url))
-    parsed_content = asyncio.run(get_abstracts(list_content[:3]))
+    print(list_content)
+    # parsed_content = asyncio.run(get_abstracts(list_content[:3]))
     parsed_content = asyncio.run(get_full_content(parsed_content))
     save_jsonl(parsed_content, "data/arxiv_list_content.jsonl")
