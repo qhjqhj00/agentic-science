@@ -7,7 +7,7 @@ import aiohttp
 
 
 def stream_completion(
-    agent, model_name, prompt, stop=None, stream=True, schema: BaseModel = None, max_tokens: int = 20000, top_p: float = 0.8, temperature: float = 0.8, repetition_penalty: float = 1.05, min_p: float = 0.05, top_k: int = 20):
+    agent, model_name, prompt, stop=None, stream=True, schema: BaseModel = None, max_tokens: int = 60000, top_p: float = 0.8, temperature: float = 0.8, repetition_penalty: float = 1.05, min_p: float = 0.05, top_k: int = 20):
     
     num_try = 0
     while num_try < 5:
@@ -239,7 +239,7 @@ async def get_multiple_pages(urls: list, max_concurrent: int = 10, session: aioh
         if close_session:
             await session.close()
 
-async def fetch_html_via_api(urls, token, api_endpoint):
+async def fetch_html_via_api(urls, token, api_endpoint, use_cache=True):
     """
     Fetch HTML content via API
     
@@ -261,7 +261,8 @@ async def fetch_html_via_api(urls, token, api_endpoint):
         try:
             data = {
                 "urls": urls,
-                "token": token
+                "token": token,
+                "use_cache": use_cache
             }
             
             async with session.post(

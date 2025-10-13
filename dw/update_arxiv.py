@@ -35,18 +35,17 @@ async def get_recent_arxiv_papers(category: str = "cs.CL", max_papers: int = 100
             break
         
         # Check if any paper in list_content has the same date as existing papers
-        should_break = False
-        for paper in list_content:
-            arxiv_id = paper.get('id', '')
-            if len(arxiv_id) >= 7 and '.' in arxiv_id:
-                date_part = arxiv_id[:7]  # e.g., "2510.02"
-                if date_part in dates:
-                    print(f"Found paper with existing date {date_part}, stopping fetch")
-                    should_break = True
-                    break
+        # should_break = False
+        # for paper in list_content:
+        #     arxiv_id = paper.get('id', '')
+
+        #     if arxiv_id in existing_arxiv_ids:
+        #         print(f"Found existing paper {arxiv_id}, stopping fetch")
+        #         should_break = True
+        #         break
         
-        if should_break:
-            break
+        # if should_break:
+        #     break
         
         # Get abstracts
         # parsed_content = await get_abstracts(list_content, existing_arxiv_ids)

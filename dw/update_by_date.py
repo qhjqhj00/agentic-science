@@ -62,6 +62,9 @@ def process_papers_by_date():
                     try:
                         with open(markdown_path, 'r', encoding='utf-8') as f:
                             md_text = f.read()
+                        if md_text.find(f"No HTML for '{arxiv_id}'") != -1:
+                            paper['parsed_content'] = None
+                            continue
                         parsed_content = parse_markdown_sections(md_text)
                         paper['parsed_content'] = parsed_content
                     except Exception as e:
@@ -73,7 +76,8 @@ def process_papers_by_date():
                 # Group by date
                 if date_str not in papers_by_date:
                     papers_by_date[date_str] = []
-                papers_by_date[date_str].append(paper)
+                if paper['parsed_content'] is not None:
+                    papers_by_date[date_str].append(paper)
             
         except Exception as e:
             print(f"Error processing paper {paper.get('id', 'unknown')}: {e}")

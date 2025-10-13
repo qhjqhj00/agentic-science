@@ -72,7 +72,7 @@ def replace_mathml_with_annotation(html: str) -> str:
     return pattern.sub(repl, html)
 
 async def get_list_page(url):
-    response = await fetch_html_via_api(url, api_dict["search_token"], api_dict["web_unlocker_api"])
+    response = await fetch_html_via_api(url, api_dict["search_token"], api_dict["web_unlocker_api"], use_cache=False)
     fetched_content = response["results"][url]
     soup = BeautifulSoup(fetched_content, features='html.parser')
     content = soup.dl
