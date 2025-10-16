@@ -38,6 +38,12 @@ def paper_attention_score(title, authors):
     response = stream_completion(agent, api_dict["local_agent"]["model"], prompt, schema=PaperAttentionScoreSchema, stream=False)
     return response
 
+def delete_long_token(content):
+    content = content.split()
+    content = [token for token in content if len(token) < 100]
+    content = " ".join(content)
+    return content
+
 def process_paper(paper_id, cursor):
     """Process a paper, catching and logging any errors."""
     cursor.execute("SELECT * FROM arxiv_papers WHERE doc_id = ?", (paper_id,))
@@ -63,6 +69,10 @@ def process_paper(paper_id, cursor):
             if section not in parsed_content:
                 continue
             content += f"{section}: {parsed_content[section]['content']}\n\n"
+
+        content = delete_long_token(content)
+        content = content[:150000]
+        
         paper_info = json.loads(parse_paper(title, content))
         processed_info["paper_info"] = paper_info
         processed_info["abs_url"] = f"https://arxiv.org/abs/{paper_id}"

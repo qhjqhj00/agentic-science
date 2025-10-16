@@ -2,6 +2,7 @@ import asyncio
 import os
 import json
 from dw.arxiv.crawler import get_list_page, get_full_content
+from dw.arxiv.process import process_papers_batch
 from config.list_urls import get_list_urls_skip
 from src.utils import save_jsonl, load_jsonl
 
@@ -44,4 +45,5 @@ if __name__ == "__main__":
     # Set maximum number of papers to fetch
     MAX_PAPERS = 400
     # Run the script
-    asyncio.run(get_recent_arxiv_papers(max_papers=MAX_PAPERS))
+    asyncio.run(get_recent_arxiv_papers(max_papers=MAX_PAPERS, step=25))
+    process_papers_batch()

@@ -2,8 +2,7 @@
 
 **Agentic-Science** is an automated system for **daily collection, analysis, and summarization of arXiv papers**.  
 It intelligently retrieves newly published arXiv papers each day, analyzes their content, categorizes them into coherent research themes, and aggregates structured daily reports in both English and Chinese.  
-Examples of generated reports can be found in:  
-📄 [`examples/en.md`](examples/en.md) | [`examples/zh.md`](examples/zh.md)
+We daily update [https://research.rag.ac.cn/](https://research.rag.ac.cn/) with the latest research reports.
 
 ---
 

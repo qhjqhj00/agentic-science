@@ -27,10 +27,14 @@ class SectionMappingSchema(BaseModel):
 
 class TopicResult(BaseModel):
     topic: str = Field(description="The name of the topic/research area")
-    ids: List[int] = Field(description="List of paper IDs belonging to this topic")
+    keywords: List[str] = Field(description="The keywords of the topic")
 
 class PaperTopicClassificationSchema(BaseModel):
     results: List[TopicResult] = Field(description="List of topics with their assigned paper IDs")
 
 class PaperAttentionScoreSchema(BaseModel):
     score: int = Field(description="The attention score of the paper")
+
+class TopicSchema(BaseModel):
+    topics: List[TopicResult] = Field(description="List of topics with their assigned keywords")
+    

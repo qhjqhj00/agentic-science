@@ -241,13 +241,28 @@ def topic_summary_prompt(topic: str, papers: list, language: str = "en"):
     Returns:
         String prompt for generating topic summary
     """
+    # Sort papers by attention score in descending order
+    papers = sorted(papers, key=lambda x: x.get('parsed_info', {}).get('attention_score', {}).get('score', 0), reverse=True)
+
     papers_text = ""
     for paper in papers:
-        papers_text += f"id: {paper['_idx']}\n"
-        papers_text += f"title: {paper['title']}\n"
-        papers_text += f"authors: {paper['authors_info']}\n"
-        papers_text += f"paper information: {paper['paper_info']}\n\n"
-    
+      author_text = ""
+      for author in paper['parsed_info']['authors_info']['authors']:
+        org_text = ", ".join(author['org'])
+        author_text += f"{author['name']} from {org_text}\n"
+      paper_info_text = ""
+      for key, value in paper['parsed_info']['paper_info'].items():
+        if key == "keywords":
+          continue
+        paper_info_text += f"{key}: {value}\n"
+      attention_score_text = f"attention score: {paper['parsed_info']['attention_score']['score']}\n"
+      paper_id_text = f"paper id: {paper['_idx']}\n"
+      papers_text += f"title: {paper['title']}\n"
+      papers_text += f"{paper_id_text}\n"
+      papers_text += f"authors: {author_text}\n"
+      papers_text += f"paper information: {paper_info_text}\n"
+        # papers_text += f"attention score: {attention_score_text}\n\n"
+      
     if language == "zh":
         return f"""你是一个研究论文分析专家。请为给定主题下的论文集合生成一个全面的总结报告。
 
@@ -261,7 +276,7 @@ def topic_summary_prompt(topic: str, papers: list, language: str = "en"):
 1. **主题概述**: 简要介绍该研究主题的背景和重要性
 
 2. **各论文贡献**: 分别对每篇论文进行详细分析，突出不同论文对该主题的独特贡献，格式如下：
-   "来自[机构]的[第一作者]等人提出了[具体方法/模型]，主要贡献是[创新点和解决的问题]。在[数据集]上的实验表明，相比[基线方法]取得了[具体提升效果][^论文id]。"
+   "来自[机构]的[第一作者]等人研究了[研究内容/问题]，提出了[具体方法/模型]来解决[核心问题]。该方法的主要创新点是[创新点]，产生的价值在于[实际价值和意义]。在[数据集]上的实验表明，相比[基线方法]取得了[具体提升效果]，得出的结论是[主要结论][^论文id]。"
 
 3. **技术趋势**: 总结该主题下不同论文采用的主要技术路线和方法演进
 
@@ -269,6 +284,7 @@ def topic_summary_prompt(topic: str, papers: list, language: str = "en"):
 
 要求:
 - 使用中文输出
+- 重点内容可以用**加粗**等方式强调，增强可读性
 - 重点突出每篇论文的独特贡献和创新点
 - 作者信息简化为"来自[机构]的[第一作者]等人"的格式
 - 在描述每篇论文时，必须在句末添加引用格式 [^论文id]
@@ -293,7 +309,7 @@ Please generate a summary following these requirements:
 1. **Topic Overview**: Briefly introduce the background and importance of this research topic
 
 2. **Individual Paper Contributions**: Analyze each paper in detail, highlighting the unique contributions of different papers to this topic, using the following format:
-   "[First author] from [Institution] and colleagues proposed [specific method/model], with main contributions being [innovation points and problems solved]. Experiments on [datasets] showed [specific improvements] compared to [baseline methods][^paper_id]."
+   "[First author] from [Institution] and colleagues studied [research content/problem], proposing [specific method/model] to solve [core problem]. The main innovation points of this method are [innovation points], and the value lies in [practical value and significance]. Experiments on [datasets] showed [specific improvement effects] compared to [baseline methods], concluding that [main conclusions][^paper_id]."
 
 3. **Technical Trends**: Summarize the main technical approaches and methodological evolution adopted by different papers in this topic
 
@@ -304,9 +320,47 @@ Requirements:
 - Emphasize the unique contributions and innovations of each paper
 - Simplify author information to "[First author] from [Institution] and colleagues" format
 - Must add citation format [^paper_id] at the end when describing each paper
-- When introducing individual paper contributions, list each paper starting with "**"
+- When introducing individual paper contributions, list each paper starting with "- "
 - Content should be accurate, concise, and well-organized
 - Do not need to organize a reference list at the end
 - Do not translate author names, keep them in original form
 
 Please generate a detailed topic summary report:"""
+
+def keyword_topic_extraction_prompt(keywords_list):
+    """
+    Generate a prompt to extract topics from a list of keywords.
+    
+    Args:
+        keywords_list: List of keywords to be categorized into topics
+    
+    Returns:
+        str: Formatted prompt for topic extraction
+    """
+    keywords_text = "\n".join([f"- {keyword}" for keyword in keywords_list])
+    
+    return f"""You are a research topic analysis expert. Please analyze the following list of keywords and group them into 10 meaningful research topics that cover as many keywords as possible.
+
+Keywords to analyze:
+{keywords_text}
+
+Requirements:
+1. Create exactly 10 topics that best represent the research areas covered by these keywords
+2. Each topic should be a broad, meaningful research area name
+3. Group related keywords under the same topic (e.g., "chain-of-thought reasoning", "multimodal reasoning", "parallel reasoning" should all be grouped under "reasoning")
+4. Try to cover as many keywords as possible - minimize orphaned keywords
+5. Topic names should be concise and descriptive
+6. Each topic should contain at least 2 keywords when possible
+
+Output format (JSON):
+[
+    {{"topic": "topic_name_1", "keywords": ["keyword1", "keyword2", "keyword3"]}},
+    {{"topic": "topic_name_2", "keywords": ["keyword4", "keyword5"]}},
+    {{"topic": "topic_name_3", "keywords": ["keyword6", "keyword7", "keyword8"]}},
+    ...
+    {{"topic": "topic_name_10", "keywords": ["keyword_n"]}}
+]
+
+Please analyze the keywords and generate the topic groupings:"""
+
+

@@ -4,15 +4,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pipeline.arxiv import process_paper
 from src.utils import *
 
-def process_papers_batch():
+def process_papers_batch(db_path="data/db/arxiv.db"):
     """Process all papers in the database with batch size=4"""
     # Connect to database
-    conn = sqlite3.connect("data/db/arxiv.db")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     # Get all unprocessed papers
-    # cursor.execute("SELECT doc_id FROM arxiv_papers WHERE status != 'processed'")
-    cursor.execute("SELECT doc_id FROM arxiv_papers")
+    cursor.execute("SELECT doc_id FROM arxiv_papers WHERE status != 'processed'")
+    # cursor.execute("SELECT doc_id FROM arxiv_papers")
     paper_ids = [row[0] for row in cursor.fetchall()]
     
     print(f"Found {len(paper_ids)} papers to process")
@@ -28,7 +28,7 @@ def process_papers_batch():
         
         
         # Use ThreadPoolExecutor to process batch concurrently
-        with ThreadPoolExecutor(max_workers=batch_size) as executor:
+        with ThreadPoolExecutor(max_workers=batch_size) as executor:    
             # Submit all papers in the batch
             future_to_paper_id = {}
             for paper_id in batch:
@@ -61,9 +61,9 @@ def process_papers_batch():
     conn.close()
     print("Finished processing all papers")
 
-def process_single_paper(paper_id):
+def process_single_paper(paper_id, db_path="data/db/arxiv.db"):
     """Process a single paper"""
-    conn = sqlite3.connect("data/db/arxiv.db")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     try:
