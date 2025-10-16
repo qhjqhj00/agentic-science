@@ -52,6 +52,65 @@ Output:
 
 Please extract the author information and return only the JSON array:"""
 
+def paper_attention_score_prompt(title, authors):
+    authors_text = ""
+    org_list = []
+    for author in authors["authors"]:
+        authors_text += f"{author['name']}\n"
+        org_list.extend(author['org'])
+    org_list = list(set(org_list))
+    if org_list:
+      org_text = "\n".join(org_list)
+    else:
+      org_text = "No affiliations found"
+    return f"""You are an expert researcher evaluating the attention-grabbing potential of academic papers. Based on the paper title, authors, and their affiliations, please rate the paper's "attention score" from 1-5.
+
+Paper Information:
+- Title: {title}
+- Authors: 
+{authors_text}
+- Affiliations:
+{org_text}
+
+
+Rating Criteria:
+
+5 points: Highly attention-grabbing
+- Title is very compelling (e.g., "GPT-5 Technical Report", "Attention Is All You Need", breakthrough announcements)
+- Authors are from top-tier CS institutions (OpenAI, Google, Meta, Stanford, CMU, MIT, etc.)
+- Combination of prestigious institutions and exciting title
+
+4 points: Good attention-grabbing
+- Authors from well-known CS institutions (top universities like Berkeley, UIUC, NUS, PKU, Tsinghua, or major tech companies like Microsoft, NVIDIA, Baidu, ByteDance, Alibaba, etc.)
+- Title is appealing and addresses relevant research areas
+- Strong institutional reputation with interesting research direction
+
+3 points: Moderately attention-grabbing  
+- Authors from less well-known institutions or regional universities
+- Title is fairly ordinary or addresses common research problems without novel angles
+- Limited institutional prestige and conventional research topics
+
+2 points: Below average attention-grabbing
+- Institutions are reasonably authoritative (US universities, reputable Chinese/European institutions)
+- Title addresses popular/trending topics or tasks but lacks novelty
+- Good balance of institutional credibility but topic relevance is limited
+
+1 point: Low attention-grabbing
+- Authors from less prestigious or unknown institutions
+- Title focuses on niche domains or very specific tasks (e.g., tasks for minority languages)
+- Limited broad appeal or institutional backing
+
+Instructions:
+1. Consider both the title's appeal and institutional prestige
+2. Weight recent trending topics and breakthrough claims higher
+3. Recognize top-tier institutions in computer science and AI
+4. Be objective about the likely attention the paper would receive in the research community
+
+Output format (JSON):
+{{"score": 5}}
+
+Please evaluate the paper and return only the JSON with the attention score:"""
+
 
 PAPER_ANALYSIS_PROMPT = """You are an expert researcher analyzing academic papers. Given the following sections of a research paper, please analyze and extract key information.
 
@@ -59,47 +118,27 @@ Paper sections:
 - Title: {title}
 - content: {content}
 
-Please analyze the paper and answer the following questions:
+Please analyze the paper and answer the following three questions:
 
-1. What scenario and task does this paper focus on?
-2. What problems does this paper solve and what is the value of these problems?
-3. What methods does this paper propose to solve these problems?
-4. What are the main innovations of the proposed methods?
-5. What datasets and models were used in the experiments, and what baselines were compared?
+1. Scenario: What is the core problem this paper aims to solve? Why is it important?
+2. Value: What value does this paper bring in terms of technology/data/theory? What new methods, datasets, or theories are proposed? If it's a survey paper, how does it analyze the field? What makes it different from previous work?
+3. Insight: What insights can this paper provide through experiments or analysis? What are the experimental conclusions? On which datasets does it outperform which baselines?
+4. Keywords: What are the 3 most representative keywords that capture the core content and contributions of this paper? These should be technical terms or phrases that best describe the main research areas, methods, or applications (e.g., "long-context processing", "agentic tool-using", "video retrieval", "parameter pruning").
 
 Output format (JSON):
 {{
-  "scenario_and_task": {{
-    "scenario": "Description of the application scenario or domain",
-    "task": "Specific task or problem being addressed"
-  }},
-  "problems_and_value": {{
-    "problems": ["Problem 1", "Problem 2", "..."],
-    "value": "Why these problems are important and valuable to solve"
-  }},
-  "proposed_methods": {{
-    "main_method": "Primary method or approach proposed",
-    "key_components": ["Component 1", "Component 2", "..."],
-    "technical_details": "Brief description of how the method works"
-  }},
-  "innovations": {{
-    "main_innovations": ["Innovation 1", "Innovation 2", "..."],
-    "novelty_description": "What makes this work novel compared to existing approaches"
-  }},
-  "experimental_setup": {{
-    "datasets": ["Dataset 1", "Dataset 2", "..."],
-    "models": ["Base model 1", "Base model 2", "..."],
-    "baselines": ["Baseline 1", "Baseline 2", "..."],
-    "evaluation_metrics": ["Metric 1", "Metric 2", "..."]
-  }}
+  "scenario": "Detailed description of the core problem being addressed and its importance. Explain the application domain, the specific challenges, and why solving this problem matters for the field or real-world applications.",
+  "value": "Comprehensive description of the technical, data, or theoretical contributions. Detail the new methods, algorithms, datasets, or theoretical frameworks proposed. For survey papers, describe how the field is analyzed and organized. Explain what makes this work novel compared to existing approaches and what gaps it fills.",
+  "insight": "Rich description of the insights gained from experiments or analysis. Include specific experimental findings, performance improvements, dataset comparisons, baseline comparisons, and key conclusions. Mention specific metrics, improvements, and what the results reveal about the problem or solution.",
+  "keywords": "List of 3 most representative keywords that capture the core content and contributions of this paper. These should be technical terms or phrases that best describe the main research areas, methods, or applications (e.g., \"long-context processing\", \"agentic tool-using\", \"video retrieval\", \"parameter pruning\")."
 }}
 
 Instructions:
 1. Extract information directly from the provided sections
 2. If information for any field is not found in the provided content, set the value to null
-3. Be concise but comprehensive in your descriptions
+3. Provide rich and comprehensive descriptions for each field
 4. Focus on factual information rather than subjective interpretations
-5. Ensure all arrays contain relevant items found in the text
+5. Include specific details about methods, datasets, baselines, and results when available
 
 Please analyze the paper and return only the JSON structure:"""
 
