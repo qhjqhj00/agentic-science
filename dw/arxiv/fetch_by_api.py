@@ -41,6 +41,7 @@ def parse_authors_from_xml(xml_content):
 days = 365
 day_timestamps = [(datetime.now() - timedelta(days=i)).strftime('%Y%m%d') for i in range(1, days)]
 
+fields = ["cs.AI"]
 BASE_URL = 'http://export.arxiv.org/api/query?search_query=cat:cs.AI+AND+submittedDate:[{day}0000+TO+{day}2359]&max_results=1000'
 
 feeds = [BASE_URL.format(day=date) for date in day_timestamps]
