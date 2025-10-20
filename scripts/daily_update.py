@@ -61,12 +61,13 @@ if __name__ == "__main__":
     import time
     
     # Schedule the job to run daily at 2:00 AM
-    schedule.every().day.at("02:00").do(main)
+    main()
+    # schedule.every().day.at("02:00").do(main)
     
-    print("Daily update scheduler started. Will run at 2:00 AM every day.")
-    print("Press Ctrl+C to stop the scheduler.")
+    # print("Daily update scheduler started. Will run at 2:00 AM every day.")
+    # print("Press Ctrl+C to stop the scheduler.")
     
-    # Keep the script running
-    while True:
-        schedule.run_pending()
-        time.sleep(60)  # Check every minute
+    # # Keep the script running
+    # while True:
+    #     schedule.run_pending()
+    #     time.sleep(60)  # Check every minute
